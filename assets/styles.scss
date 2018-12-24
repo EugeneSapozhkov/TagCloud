@@ -1,0 +1,36 @@
+* {
+  margin: 0;
+  padding: 0;
+  font-family: Roboto, Arial, sans-serif;
+}
+
+html,
+body,
+#app,
+.no-match-404 {
+  height: 100%;
+}
+
+html,
+body {
+  font-size: 16px;
+}
+
+#tagcloud-wrapper {
+  width: 100vw;
+  height: 100vh;
+  background-color: white;
+  position: relative;
+}
+
+.tag {
+  transition: 0.2s ease-in-out;
+
+  &:hover {
+    background-color: rgba(255, 96, 111, 0.3) !important;
+  }
+}
+
+#pages {
+  display: inline-block;
+}
