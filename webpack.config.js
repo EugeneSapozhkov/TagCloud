@@ -9,7 +9,7 @@ module.exports = {
 		publicPath: "/dist"
 	},
 	devServer: {
-		hot: true,
+		hot: false,
 		disableHostCheck: true,
 		historyApiFallback: true,
 	},

@@ -2,17 +2,11 @@ import React, { Component } from 'react'
 import { connect } from 'react-redux';
 import { withRouter } from 'react-router-dom';
 import { tagsApi } from "modules/tags";
-import { sortBy, reverse, last } from "lodash";
+import { sortBy, reverse } from "lodash";
 import randomColor from "randomcolor";
 
 
-// config
-const TURNS 		= 10; 	// spiral turns
-const ACCURACY		= 0.06; // more dotes = more accuracy
-const COMPRESSION	= 2.5;  // compression of spiral
-
 const insertedWordsCoordinates = [];
-
 
 class Home extends Component {
 	constructor(props) {
@@ -34,31 +28,31 @@ class Home extends Component {
 			y: this.cloudTag.current.offsetHeight / 2
 		};
 
-		tags.forEach((tag, index) => {
+		tags.forEach(tag => {
 			// create word element before append
 			const wordDOM = this.prepareDOMWord(tag);
 
-			// run algorithm by spiral
-			for (let k = 0; k < 360 * TURNS; k++) {
-				const angle = 360 * ACCURACY * index;
-				const x = (ACCURACY + angle) * Math.cos(angle);
-				const y = (ACCURACY + angle / COMPRESSION) * Math.sin(angle);
+			const turns = 5;
+			const iterationPerCircle = 180;
+			const compression = 0.8;
 
-				const isIntersect = this.checkIntersection(wordDOM, center.x + x, center.y + y);
+			let angle = 0;
+			let radius = 0;
+
+			// run algorithm by spiral
+			for (let k = 0; k < turns * iterationPerCircle; k++) {
+				radius += 0.3;
+				angle += (Math.PI * 2) / iterationPerCircle;
+
+				const x = center.x + radius * Math.cos(angle);
+				const y = center.y + radius * compression * Math.sin(angle);
 
 				// if now intersection, put element to the DOM and close function
-				if (!isIntersect) {
-					this.cloudTag.current.appendChild(wordDOM);
-
-					wordDOM.style.left = center.x + x - wordDOM.offsetWidth  / 2 + "px";
-					wordDOM.style.top =  center.y + y - wordDOM.offsetHeight / 2 + "px";
-
+				if (!this.checkIntersection(wordDOM, x, y)) {
+					wordDOM.style.visibility = "visible";
 					insertedWordsCoordinates.push(wordDOM.getBoundingClientRect());
 					return;
 				}
-
-				// break spiral intteration
-				break;
 			}
 		});
 	};
@@ -71,10 +65,11 @@ class Home extends Component {
 			hue: 'red'
 		});
 		wordContainer.style.backgroundColor = "white";
+		wordContainer.style.visibility = "hidden";
 		wordContainer.className = "tag";
 
 		// set font size depend on sentimentScore (using like a value)
-		wordContainer.style.fontSize = Math.ceil(word.sentimentScore / 3) + "px";
+		wordContainer.style.fontSize = Math.ceil(word.sentimentScore / 5) + "px";
 		wordContainer.appendChild(document.createTextNode(word.label));
 
 		wordContainer.addEventListener("click", () => this.props.history.push(`/tag?tagId=${word.id}`), false);
@@ -90,21 +85,20 @@ class Home extends Component {
 		this.cloudTag.current.appendChild(wordDOM);
 
 		// clarify position to the center
-		wordDOM.style.left = x - wordDOM.offsetWidth / 2 + "px";
-		wordDOM.style.top = y - wordDOM.offsetHeight / 2 + "px";
+		wordDOM.style.left = x - wordDOM.offsetWidth  / 2 + "px";
+		wordDOM.style.top  = y - wordDOM.offsetHeight / 2 + "px";
 
 		// get word coordinates in the DOM
 		const currentWord = wordDOM.getBoundingClientRect();
 
-		// remove word from DOM and keep coords for comparing
-		this.cloudTag.current.removeChild(wordDOM);
-
 		// check intersection with DOM words
 		for (let i = 0; i < insertedWordsCoordinates.length; i++) {
-			if(!(currentWord.right < insertedWordsCoordinates[i].left 	||
-				currentWord.bottom < insertedWordsCoordinates[i].top 	||
-				currentWord.left   > insertedWordsCoordinates[i].right 	||
-				currentWord.top	   > insertedWordsCoordinates[i].bottom)) {
+			if (!(
+				currentWord.right  < insertedWordsCoordinates[i].left  ||
+				currentWord.bottom < insertedWordsCoordinates[i].top   ||
+				currentWord.left   > insertedWordsCoordinates[i].right ||
+				currentWord.top    > insertedWordsCoordinates[i].bottom
+			)) {
 				return true;
 			}
 		}
