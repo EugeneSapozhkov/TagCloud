@@ -11,26 +11,42 @@ const insertedWordsCoordinates = [];
 class Home extends Component {
 	constructor(props) {
 		super(props);
-
-		// create a ref of the cloud container
-		this.cloudTag = React.createRef();
-		this.props.getTags();
+		this.tagcloud = React.createRef();
+		this.invisible = React.createRef();
 	}
 
 	componentDidMount() {
-		this.cloudTag.current.focus();
+		const { cloudElements, getTags, buildCloud } = this.props;
+
+		if (!cloudElements.length) {
+			getTags()
+			.then(tags => {
+				const cloudElements = this.createdCloud(this.sort(tags.payload, "sentimentScore"));
+				buildCloud(cloudElements);
+				return this.pushToCloud(cloudElements);
+			})
+		}
+
+		return this.pushToCloud(cloudElements);
 	}
 
+	pushToCloud = elements => elements.map(el => this.tagcloud.current.appendChild(el));
+
 	createdCloud = tags => {
+		const tagsForRender = [];
+
 		// get center point of the container
 		const center = {
-			x: this.cloudTag.current.offsetWidth / 2,
-			y: this.cloudTag.current.offsetHeight / 2
+			x: this.tagcloud.current.offsetWidth / 2,
+			y: this.tagcloud.current.offsetHeight / 2
 		};
 
 		tags.forEach(tag => {
-			// create word element before append
-			const wordDOM = this.prepareDOMWord(tag);
+			const { current } = this.invisible;
+			const { sentimentScore, label } = tag;
+
+			current.style.fontSize = Math.ceil(sentimentScore / 5) + "px";
+			current.innerHTML = label;
 
 			const turns = 5;
 			const iterationPerCircle = 180;
@@ -41,56 +57,32 @@ class Home extends Component {
 
 			// run algorithm by spiral
 			for (let k = 0; k < turns * iterationPerCircle; k++) {
+
 				radius += 0.3;
-				angle += (Math.PI * 2) / iterationPerCircle;
+				angle  += (Math.PI * 2) / iterationPerCircle;
 
 				const x = center.x + radius * Math.cos(angle);
 				const y = center.y + radius * compression * Math.sin(angle);
 
+				current.style.left = x - current.offsetWidth  / 2 + "px";
+				current.style.top  = y - current.offsetHeight / 2 + "px";
+
+				// get word coordinates in the DOM
+				const coordinates = current.getBoundingClientRect();
+
 				// if now intersection, put element to the DOM and close function
-				if (!this.checkIntersection(wordDOM, x, y)) {
-					wordDOM.style.visibility = "visible";
-					insertedWordsCoordinates.push(wordDOM.getBoundingClientRect());
+				if (!this.checkIntersection(coordinates)) {
+					tagsForRender.push(this.prepare(current.cloneNode(), tag));
+					insertedWordsCoordinates.push(coordinates);
 					return;
 				}
 			}
 		});
+
+		return tagsForRender;
 	};
 
-	prepareDOMWord = word => {
-		const wordContainer = document.createElement("div");
-		wordContainer.style.position = "absolute";
-		wordContainer.style.cursor = "pointer";
-		wordContainer.style.color = randomColor({
-			hue: 'red'
-		});
-		wordContainer.style.backgroundColor = "white";
-		wordContainer.style.visibility = "hidden";
-		wordContainer.className = "tag";
-
-		// set font size depend on sentimentScore (using like a value)
-		wordContainer.style.fontSize = Math.ceil(word.sentimentScore / 5) + "px";
-		wordContainer.appendChild(document.createTextNode(word.label));
-
-		wordContainer.addEventListener("click", () => this.props.history.push(`/tag?tagId=${word.id}`), false);
-
-		// debug
-		// wordContainer.style.border = "1px solid gray";
-
-		return wordContainer;
-	};
-
-	checkIntersection = (wordDOM, x, y) => {
-		// insert compare word into the DOM
-		this.cloudTag.current.appendChild(wordDOM);
-
-		// clarify position to the center
-		wordDOM.style.left = x - wordDOM.offsetWidth  / 2 + "px";
-		wordDOM.style.top  = y - wordDOM.offsetHeight / 2 + "px";
-
-		// get word coordinates in the DOM
-		const currentWord = wordDOM.getBoundingClientRect();
-
+	checkIntersection = currentWord => {
 		// check intersection with DOM words
 		for (let i = 0; i < insertedWordsCoordinates.length; i++) {
 			if (!(
@@ -106,21 +98,31 @@ class Home extends Component {
 		return false;
 	};
 
+	prepare = (el, { label, id, sentimentScore }) => {
+		el.removeAttribute("id");
+		el.innerHTML = label;
+		el.className = "tag";
+		el.style.color = randomColor({ hue: 'red' });
+		el.style.fontSize = Math.ceil(sentimentScore / 5) + "px";
+		el.addEventListener("click", () => this.props.history.push(`/tag?tagId=${id}`), false);
+		return el;
+	};
+
+
 	sort = (data, field) => reverse(sortBy(data, [field]));
 
 	render() {
-		const { tags } = this.props;
-		return (
-			<>
-				{tags.length !== 0 && this.createdCloud(this.sort(tags, "sentimentScore"))}
-				<div id="tagcloud-wrapper" ref={this.cloudTag} />
-			</>
-		)
+		return <>
+			<div id="tagcloud" ref={this.tagcloud}>
+				<div id="invisible" ref={this.invisible} />
+			</div>
+		</>
 	}
 }
 
 const mapStateToProps = state => ({
 	tags: state.tagsReducer.tags,
+	cloudElements: state.tagsReducer.cloudElements,
 });
 
 export default withRouter(connect(mapStateToProps, tagsApi)(Home));

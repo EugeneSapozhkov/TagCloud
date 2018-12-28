@@ -14,7 +14,7 @@ const fakeGet = (incomingData) => {
 };
 
 const getTags = () => dispatch => {
-	fakeGet(tags)
+	return fakeGet(tags)
 		.then(response => dispatch(actions.getTagsAction(response)))
 		.catch(err => {
 			console.error(err);
@@ -22,6 +22,11 @@ const getTags = () => dispatch => {
 	})
 };
 
+const buildCloud = (elements) => dispatch => {
+	dispatch(actions.buildCloudAction(elements))
+};
+
 export default {
 	getTags,
+	buildCloud,
 }

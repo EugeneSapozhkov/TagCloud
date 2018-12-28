@@ -16,7 +16,7 @@ body {
   font-size: 16px;
 }
 
-#tagcloud-wrapper {
+#tagcloud {
   width: 100vw;
   height: 100vh;
   background-color: white;
@@ -24,6 +24,9 @@ body {
 }
 
 .tag {
+  position: absolute;
+  cursor: pointer;
+  background-color: white;
   transition: 0.2s ease-in-out;
 
   &:hover {
@@ -33,4 +36,11 @@ body {
 
 #pages {
   display: inline-block;
+}
+
+#invisible {
+  position: absolute;
+  visibility: hidden;
+  left: 0;
+  top: 0;
 }
